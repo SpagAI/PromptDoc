@@ -187,7 +187,7 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
       <div class="palette" id="palette"></div>
       <p class="src" id="src"></p>
       <div class="row">
-        <button class="btn" id="ask"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l1.7 4.3L14 7l-4.3 1.7L8 13l-1.7-4.3L2 7l4.3-1.7z" fill="currentColor"/></svg>Check with AI</button>
+        <button class="btn" id="ask" hidden><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l1.7 4.3L14 7l-4.3 1.7L8 13l-1.7-4.3L2 7l4.3-1.7z" fill="currentColor"/></svg>Check with AI</button>
         <span class="note" id="ask-note" aria-live="polite"></span>
       </div>
       <div class="label">Fix next</div>
@@ -200,7 +200,7 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
   <section class="lower" aria-label="Improve, test and learn">
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="t-improve" aria-controls="p-improve" aria-selected="true">Improve</button>
-      <button class="tab" role="tab" id="t-test" aria-controls="p-test" aria-selected="false">Test it</button>
+      <button class="tab" role="tab" id="t-test" aria-controls="p-test" aria-selected="false" hidden>Test it</button>
       <button class="tab" role="tab" id="t-guide" aria-controls="p-guide" aria-selected="false">Guide</button>
     </div>
 
@@ -241,7 +241,7 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
 
   <footer>
     <span>PromptDoc · by Spag AI</span>
-    <span>The quick check looks for patterns. Check with AI reads for meaning.</span>
+    <span id="foot-note">The quick check looks for patterns. Check with AI reads for meaning.</span>
   </footer>
 </div>
 
@@ -871,7 +871,7 @@ function refresh(){
   if (!rxFromAI){
     rxEl.value = templateFor(text, current);
     $("#rx-tag").textContent = "Template";
-    $("#rx-note").textContent = "Missing sections added in order. Fill in the [brackets], or use Check with AI for a full rewrite.";
+    $("#rx-note").textContent = "Missing sections added in order. Fill in the [brackets].";
   }
   scoresLine();
 }
@@ -982,7 +982,11 @@ const samplePromise = (async () => {
   try { const r = await fetch("api/ai"); const d = await r.json(); if (d && d.ready) return apiAI(); } catch {}
   return null;
 })();
-samplePromise.then(s => { if (!s) disableAI("AI checks are not set up on this copy. The quick check works everywhere."); });
+samplePromise.then(s => {
+  if (s){ $("#ask").hidden = false; $("#t-test").hidden = false; return; }
+  aiOff = true;
+  $("#foot-note").textContent = "Runs entirely in your browser. Nothing you paste leaves this page.";
+});
 function disableAI(msg){
   aiOff = true;
   $("#ask").disabled = true; $("#run").disabled = true;
