@@ -140,6 +140,36 @@ input[type="text"]:focus-visible{outline:none;border-color:var(--ink)}
 footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:16px}
 @media (prefers-reduced-motion:reduce){.sw .pill i{transition:none}}
 @media (max-width:600px){.paper,textarea{min-height:320px}}
+/* Markdown editor: a coloured copy of the text sits under a transparent textarea */
+:root{--md-h:#6D28D9;--md-list:#C2410C;--md-rule:#C0262D;--md-quote:#15803D;--md-var:#CDB9FF;--md-ph:#FFE066}
+:root[data-theme="dark"]{--md-h:#C4B5FD;--md-list:#FDBA74;--md-rule:#FCA5A5;--md-quote:#86EFAC;--md-var:#5B4A99;--md-ph:#7A6A1F}
+.mdbar{display:flex;gap:2px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.mdbar button{border:0;background:none;border-radius:7px;padding:4px 8px;cursor:pointer;font:500 12.5px var(--f-mono);color:var(--muted)}
+.mdbar button:hover{background:var(--soft);color:var(--ink)}
+.mdbar .sep{width:1px;height:16px;background:var(--line);margin:0 6px}
+.mdbar .saved{margin-left:auto;font:11.5px var(--f-mono);color:var(--faint)}
+.editor{position:relative;flex:1;display:flex;min-height:460px}
+.editor .md,.editor #prompt{font:13.5px/1.75 var(--f-mono);letter-spacing:0;padding:20px 22px;margin:0;border:0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;tab-size:2;scrollbar-gutter:stable}
+.editor .md{position:absolute;inset:0;overflow:hidden;color:var(--ink);pointer-events:none}
+.editor #prompt{position:relative;z-index:1;flex:1;width:100%;min-height:460px;color:transparent;caret-color:var(--ink);background:transparent;resize:vertical;overflow-y:auto}
+.editor #prompt::placeholder{color:var(--faint)}
+.editor #prompt::selection{background:color-mix(in srgb, #9EDCFF 55%, transparent);color:transparent}
+.md .t-h{color:var(--md-h)} .md .t-li{color:var(--md-list)} .md .t-rule{color:var(--md-rule)} .md .t-q{color:var(--md-quote)}
+.md .t-var{background:color-mix(in srgb, var(--md-var) 70%, transparent);border-radius:3px}
+.md .t-ph{background:color-mix(in srgb, var(--md-ph) 70%, transparent);border-radius:3px}
+.md .t-dim{color:var(--faint)} .md .t-code{background:var(--soft);border-radius:3px}
+@media (max-width:600px){.editor,.editor #prompt{min-height:320px}}
+/* History panel and undo toast */
+.hist{border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.hist ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:320px;overflow:auto}
+.hist li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.hist li:first-child{border-top:0}
+.hist li b{font-weight:500;font-size:13.5px}
+.hist li small{grid-column:1;color:var(--faint);font:11.5px var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist li button{grid-row:1 / 3;grid-column:2}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom, 0px));z-index:50;display:flex;align-items:center;gap:14px;background:var(--btn);color:var(--btn-ink);border-radius:999px;padding:10px 12px 10px 18px;box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:14px;max-width:calc(100% - 32px)}
+.toast button{border:0;border-radius:999px;padding:6px 14px;background:var(--btn-ink);color:var(--btn);font-weight:600;cursor:pointer}
+.link.armed{color:var(--bad);background:color-mix(in srgb, var(--bad) 10%, transparent)}
 .gallery{border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:14px}
 .gal-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .gal-head h3{font-family:var(--f-display);font-size:24px;line-height:1.1;margin-right:auto}
@@ -182,6 +212,7 @@ input[type="password"]:focus-visible,.connect input[type="text"]:focus-visible{o
 
 </head>
 <body>
+<div class="toast" id="toast" role="status" hidden><span id="toast-msg"></span><button id="toast-undo">Undo</button></div>
 <div class="wrap">
   <header class="top">
     <div class="mark">prompt<span class="hl">doc</span></div>
@@ -206,6 +237,7 @@ input[type="password"]:focus-visible,.connect input[type="text"]:focus-visible{o
         <span class="spacer"></span>
         <button class="link" id="load-weak">Weak example</button>
         <button class="link" id="load-starter"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:5px"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8" fill="#FFE066" stroke="currentColor" stroke-width="2"/></svg>Templates</button>
+        <button class="link" id="history-btn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.5 4v4.5H8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>History</button>
         <button class="link" id="clear">Clear</button>
       </div>
       <div class="gallery" id="gallery" hidden>
@@ -216,8 +248,28 @@ input[type="password"]:focus-visible,.connect input[type="text"]:focus-visible{o
         </div>
         <div class="tpls" id="tpls"></div>
       </div>
+      <div class="hist" id="hist" hidden>
+        <div class="gal-head"><h3>Earlier <em>versions</em></h3><button class="link" id="hist-clear">Clear history</button><button class="link" id="hist-close">Close</button></div>
+        <p class="note">PromptDoc saves your prompt as you type, and keeps a copy before anything replaces or clears it. Everything stays in this browser.</p>
+        <ul id="hist-list"></ul>
+      </div>
       <div class="paper">
-        <textarea id="prompt" spellcheck="false" aria-label="Your prompt" placeholder="Paste a prompt here…"></textarea>
+        <div class="mdbar" id="mdbar" role="toolbar" aria-label="Markdown tools">
+          <button data-md="h" title="Heading"># H</button>
+          <button data-md="b" title="Bold">**B**</button>
+          <button data-md="ul" title="Bullet list">- list</button>
+          <button data-md="ol" title="Numbered list">1. list</button>
+          <button data-md="var" title="Variable">{{ }}</button>
+          <button data-md="ph" title="Placeholder to fill in">[ ]</button>
+          <span class="sep"></span>
+          <button data-md="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+          <button data-md="redo" title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
+          <span class="saved" id="saved"></span>
+        </div>
+        <div class="editor" id="editor">
+          <pre class="md" id="md" aria-hidden="true"></pre>
+          <textarea id="prompt" spellcheck="false" aria-label="Your prompt, in Markdown" placeholder="Paste or write a prompt in Markdown…"></textarea>
+        </div>
         <div class="map" id="map" hidden tabindex="0" aria-label="Your prompt, highlighted by section"></div>
       </div>
       <div class="meta"><span id="count">0 words</span><span id="map-hint">Switch to Highlight to see each section in colour</span></div>
@@ -1370,7 +1422,7 @@ function setView(v){
   view = v;
   $("#v-write").setAttribute("aria-pressed", String(v === "write"));
   $("#v-map").setAttribute("aria-pressed", String(v === "map"));
-  promptEl.hidden = v !== "write";
+  $("#editor").hidden = v !== "write"; $("#mdbar").hidden = v !== "write";
   $("#map").hidden = v !== "map";
   $("#map-hint").textContent = v === "map" ? "Click the text to edit" : "Switch to Highlight to see each section in colour";
   if (v === "map") renderMap(); else promptEl.focus();
@@ -1447,6 +1499,7 @@ function scoresLine(){
 
 function refresh(){
   const text = promptEl.value;
+  renderMd();
   const w = wordCount(text);
   $("#count").textContent = `${w.toLocaleString()} word${w === 1 ? "" : "s"}`;
   current = quickCheck(text);
@@ -1468,6 +1521,7 @@ const TYPE_ICONS = {
   chatbot: SVG('<rect x="3" y="4" width="18" height="13" rx="4.5" fill="#3B82F6"/><path d="M8 16.5L6.5 21l5-4.5z" fill="#3B82F6"/><circle cx="9" cy="10.5" r="1.6" fill="#fff"/><circle cx="15" cy="10.5" r="1.6" fill="#fff"/>'),
 };
 const PROV_ICONS = {
+  free: SVG('<circle cx="12" cy="12" r="11" fill="#16A34A"/><path d="M12 5.5l1.7 4.6 4.8.4-3.7 3 1.2 4.8L12 15.6l-4 2.7 1.2-4.8-3.7-3 4.8-.4z" fill="#fff"/>'),
   openai: SVG('<circle cx="12" cy="12" r="11" fill="#111"/><g fill="none" stroke="#fff" stroke-width="1.6"><ellipse cx="12" cy="12" rx="6.3" ry="2.8"/><ellipse cx="12" cy="12" rx="6.3" ry="2.8" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="6.3" ry="2.8" transform="rotate(120 12 12)"/></g>'),
   anthropic: SVG('<g stroke="#D97757" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/></g>'),
   gemini: SVG('<defs><linearGradient id="pdGem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4285F4"/><stop offset="1" stop-color="#A142F4"/></linearGradient></defs><path d="M12 2c.6 5.3 4.7 9.4 10 10-5.3.6-9.4 4.7-10 10-.6-5.3-4.7-9.4-10-10 5.3-.6 9.4-4.7 10-10z" fill="url(#pdGem)"/>'),
@@ -1514,7 +1568,7 @@ function renderGallery(){
     m.append(`${total(quickCheck(tp.text, typeId))}/100 · ${wordCount(tp.text)} words`);
     b.append(nm, p, m);
     b.addEventListener("click", () => {
-      promptEl.value = tp.text; rxFromAI = false; $("#gallery").hidden = true; refresh(); setView("map");
+      $("#gallery").hidden = true; setPrompt(tp.text, `Before loading the “${tp.name}” template`); setView("map");
     });
     box.append(b);
   }
@@ -1576,19 +1630,204 @@ function selectType(id, loadExample){
   typeId = id;
   renderTypes(); renderGuide(); renderTest();
   galFilter = "all"; if (!$("#gallery").hidden) renderGallery();
-  if (loadExample) promptEl.value = T().weak;
-  rxFromAI = false; refresh();
+  if (loadExample && isSample(promptEl.value)){ promptEl.value = T().weak; lastText = promptEl.value; }
+  rxFromAI = false; refresh(); queueDraft();
 }
+
+/* ================= Markdown editor ================= */
+const mdEl = $("#md");
+const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function mdInline(line){
+  let h = esc(line);
+  h = h.replace(/\{\{[^{}\n]*\}\}/g, m => `<span class="t-var">${m}</span>`);
+  h = h.replace(/\[[^\[\]\n]{1,80}\]/g, m => `<span class="t-ph">${m}</span>`);
+  h = h.replace(/`[^`\n]+`/g, m => `<span class="t-code">${m}</span>`);
+  h = h.replace(/(\*\*)([^*\n]+)(\*\*)/g, '<span class="t-dim">$1</span>$2<span class="t-dim">$3</span>');
+  h = h.replace(/\b(NEVER|ALWAYS|ONLY|DO NOT)\b/g, '<span class="t-rule">$1</span>');
+  h = h.replace(/(→|-&gt;)/g, '<span class="t-dim">$1</span>');
+  return h;
+}
+function renderMd(){
+  const out = promptEl.value.split("\n").map(line => {
+    if (/^\s*#{1,6}\s/.test(line)) return `<span class="t-h">${esc(line)}</span>`;
+    const li = line.match(/^(\s*)([-*•]|\d+[.)])(\s+)(.*)$/);
+    if (li) return `${li[1]}<span class="t-li">${esc(li[2])}</span>${li[3]}${mdInline(li[4])}`;
+    if (/^\s*["“]/.test(line)) return `<span class="t-q">${mdInline(line)}</span>`;
+    return mdInline(line);
+  });
+  mdEl.innerHTML = out.join("\n") + "\n ";
+  mdEl.scrollTop = promptEl.scrollTop;
+}
+promptEl.addEventListener("scroll", () => { mdEl.scrollTop = promptEl.scrollTop; });
+
+function insertText(str){
+  promptEl.focus();
+  if (!document.execCommand || !document.execCommand("insertText", false, str)){
+    const a = promptEl.selectionStart, b = promptEl.selectionEnd;
+    promptEl.setRangeText(str, a, b, "end");
+    promptEl.dispatchEvent(new Event("input"));
+  }
+}
+function lineBounds(){
+  const v = promptEl.value, a = promptEl.selectionStart;
+  const start = v.lastIndexOf("\n", a - 1) + 1;
+  let end = v.indexOf("\n", a); if (end < 0) end = v.length;
+  return {start, end, line: v.slice(start, end)};
+}
+let lastKey = "";
+promptEl.addEventListener("keydown", e => {
+  const prevKey = lastKey; lastKey = e.key;
+  if (e.key === "Tab" && prevKey !== "Escape"){
+    e.preventDefault();
+    const {start, line} = lineBounds();
+    if (e.shiftKey){
+      const n = line.match(/^ {1,2}/)?.[0].length || 0;
+      if (n){ const pos = promptEl.selectionStart; promptEl.setSelectionRange(start, start + n); insertText(""); promptEl.setSelectionRange(Math.max(start, pos - n), Math.max(start, pos - n)); }
+    } else insertText("  ");
+    return;
+  }
+  if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && promptEl.selectionStart === promptEl.selectionEnd){
+    const {start, line} = lineBounds();
+    const m = line.match(/^(\s*)([-*•]|(\d+)([.)]))\s+(.*)$/);
+    if (!m) return;
+    e.preventDefault();
+    if (!m[5].trim()){ promptEl.setSelectionRange(start, start + line.length); insertText(""); return; }
+    const marker = m[3] ? `${Number(m[3]) + 1}${m[4]}` : m[2];
+    insertText(`\n${m[1]}${marker} `);
+  }
+});
+$("#mdbar").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-md]"); if (!btn) return;
+  const k = btn.dataset.md;
+  promptEl.focus();
+  if (k === "undo"){ document.execCommand("undo"); return; }
+  if (k === "redo"){ document.execCommand("redo"); return; }
+  const a = promptEl.selectionStart, b = promptEl.selectionEnd, sel = promptEl.value.slice(a, b);
+  if (k === "b"){ insertText(`**${sel || "bold"}**`); return; }
+  if (k === "var"){ insertText(`{{${sel || "variable_name"}}}`); return; }
+  if (k === "ph"){ insertText(`[${sel || "fill this in"}]`); return; }
+  const {start} = lineBounds();
+  promptEl.setSelectionRange(start, start);
+  insertText(k === "h" ? "# " : k === "ul" ? "- " : "1. ");
+  promptEl.setSelectionRange(a + (k === "ol" ? 3 : 2), b + (k === "ol" ? 3 : 2));
+});
+
+/* ================= Autosave, history and undo ================= */
+const DRAFT_KEY = "promptdoc.draft", HIST_KEY = "promptdoc.history";
+function readJSON(k){ try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } }
+function writeJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+let versions = readJSON(HIST_KEY) || [];
+let lastText = "", lastSnapAt = Date.now(), lastSnapText = "", undoText = null, toastTimer = null;
+
+function saveVersion(text, label){
+  if (!text || !text.trim()) return;
+  if (versions[0] && versions[0].text === text) return;
+  versions.unshift({at: Date.now(), text, label, type: typeId});
+  versions = versions.slice(0, 40);
+  while (!writeJSON(HIST_KEY, versions) && versions.length > 1) versions.pop();
+  lastSnapText = text; lastSnapAt = Date.now();
+  if (!$("#hist").hidden) renderHistory();
+}
+function saveDraft(){
+  if (writeJSON(DRAFT_KEY, {text: promptEl.value, type: typeId, at: Date.now()}))
+    $("#saved").textContent = "Saved " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+let draftTimer;
+function queueDraft(){ clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 600); }
+
+function isSample(text){
+  const t = (text || "").trim();
+  if (!t) return true;
+  return Object.values(TYPES).some(x => x.weak === t || x.templates.some(tp => tp.text.trim() === t));
+}
+function showUndo(msg, prevText){
+  undoText = prevText;
+  $("#toast-msg").textContent = msg; $("#toast").hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("#toast").hidden = true; }, 12000);
+}
+$("#toast-undo").addEventListener("click", () => {
+  if (undoText == null) return;
+  const cur = promptEl.value;
+  if (cur.trim() && cur !== undoText) saveVersion(cur, "Before undo");
+  promptEl.value = undoText; lastText = undoText; undoText = null;
+  rxFromAI = false; refresh(); saveDraft(); setView("write");
+  $("#toast").hidden = true;
+});
+/* Every replacement of the prompt goes through here, so nothing is lost by accident. */
+function setPrompt(text, label){
+  const prev = promptEl.value;
+  if (prev.trim() && prev !== text && !isSample(prev)){
+    saveVersion(prev, label);
+    showUndo(text.trim() ? "Prompt replaced. Your previous version is saved." : "Prompt cleared.", prev);
+  }
+  promptEl.value = text; lastText = text; rxFromAI = false;
+  promptEl.scrollTop = 0;
+  refresh(); saveDraft();
+}
+/* Watch typing: big deletions and long sessions get a saved copy. */
+function watchEdits(){
+  const cur = promptEl.value;
+  if (lastText.length > 150 && cur.length < lastText.length * 0.5 && !isSample(lastText)){
+    saveVersion(lastText, "Before a large deletion");
+    showUndo("Large part of the prompt deleted.", lastText);
+  } else if (Date.now() - lastSnapAt > 120000 && cur.trim() && Math.abs(cur.length - lastSnapText.length) > 40){
+    saveVersion(cur, "Autosave");
+  }
+  lastText = cur; queueDraft();
+}
+function ago(ts){
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  return new Date(ts).toLocaleDateString();
+}
+function renderHistory(){
+  const ul = $("#hist-list"); ul.replaceChildren();
+  if (!versions.length){ const li = document.createElement("li"); li.innerHTML = '<b>No earlier versions yet.</b><small>A copy is saved here whenever something replaces or clears your prompt.</small>'; ul.append(li); return; }
+  versions.forEach((v, i) => {
+    const li = document.createElement("li");
+    const b = document.createElement("b"); b.textContent = v.label || "Saved version";
+    const sm = document.createElement("small");
+    const first = v.text.split("\n").find(l => l.trim()) || "";
+    sm.textContent = `${ago(v.at)} · ${TYPES[v.type]?.label || ""} · ${wordCount(v.text)} words · ${first.slice(0, 70)}`;
+    const r = document.createElement("button"); r.className = "btn ghost"; r.textContent = "Restore";
+    r.addEventListener("click", () => {
+      if (TYPES[v.type] && v.type !== typeId){ typeId = v.type; renderTypes(); renderGuide(); renderTest(); }
+      setPrompt(v.text, "Before restoring an earlier version");
+      $("#hist").hidden = true; setView("write");
+    });
+    li.append(b, sm, r); ul.append(li);
+  });
+}
+$("#history-btn").addEventListener("click", () => { const h = $("#hist"); if (h.hidden){ renderHistory(); h.hidden = false; $("#gallery").hidden = true; } else h.hidden = true; });
+$("#hist-close").addEventListener("click", () => { $("#hist").hidden = true; });
+$("#hist-clear").addEventListener("click", () => {
+  const b = $("#hist-clear");
+  if (!b.classList.contains("armed")){ b.classList.add("armed"); b.textContent = "Click again to delete all"; setTimeout(() => { b.classList.remove("armed"); b.textContent = "Clear history"; }, 3000); return; }
+  versions = []; writeJSON(HIST_KEY, versions); renderHistory(); b.classList.remove("armed"); b.textContent = "Clear history";
+});
+window.addEventListener("pagehide", saveDraft);
 
 /* ================= Inputs ================= */
 let timer;
-promptEl.addEventListener("input", () => { rxFromAI = false; clearTimeout(timer); timer = setTimeout(refresh, 160); });
+promptEl.addEventListener("input", () => { rxFromAI = false; renderMd(); watchEdits(); clearTimeout(timer); timer = setTimeout(refresh, 160); });
 rxEl.addEventListener("input", scoresLine);
-$("#load-weak").addEventListener("click", () => { promptEl.value = T().weak; rxFromAI = false; refresh(); });
+$("#load-weak").addEventListener("click", () => setPrompt(T().weak, "Before loading the weak example"));
 $("#load-starter").addEventListener("click", () => { const g = $("#gallery"); if (g.hidden) openGallery(); else g.hidden = true; });
-$("#clear").addEventListener("click", () => { promptEl.value = ""; rxFromAI = false; refresh(); promptEl.focus(); });
+$("#clear").addEventListener("click", () => {
+  const b = $("#clear");
+  if (!promptEl.value.trim()) return;
+  if (!b.classList.contains("armed")){
+    b.classList.add("armed"); b.textContent = "Click again to clear";
+    clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("armed"); b.textContent = "Clear"; }, 3000);
+    return;
+  }
+  clearTimeout(b._t); b.classList.remove("armed"); b.textContent = "Clear";
+  setPrompt("", "Before clearing"); setView("write");
+});
 $("#use").addEventListener("click", () => {
-  promptEl.value = rxEl.value; rxFromAI = false; refresh();
+  setPrompt(rxEl.value, "Before using the improved version"); setView("write");
   promptEl.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"center"});
 });
 $("#copy").addEventListener("click", async () => {
@@ -1610,6 +1849,7 @@ function showTab(id){
    1) A provider the visitor connects with their own key (requests go straight from the browser to the provider).
    2) Otherwise Claude, when the page is opened inside Claude. */
 const PROVIDERS = {
+  free:       {label:"Free AI", note:"no key needed", model:"Groq", kind:"free"},
   openai:     {label:"OpenAI", note:"ChatGPT models", model:"gpt-5-mini", kind:"openai", base:"https://api.openai.com/v1", key:"https://platform.openai.com/api-keys", ph:"sk-…"},
   anthropic:  {label:"Claude", note:"Anthropic", model:"claude-opus-5-5", kind:"anthropic", key:"https://console.anthropic.com/settings/keys", ph:"sk-ant-…"},
   gemini:     {label:"Gemini", note:"free tier", model:"gemini-flash-latest", kind:"gemini", key:"https://aistudio.google.com/apikey", ph:"AIza…"},
@@ -1623,28 +1863,40 @@ const store = {
   clear(){ try { localStorage.removeItem("promptdoc.ai"); } catch {} }
 };
 let conn = store.get();           // {provider, key, model, base}
+const freeReady = inClaudeEarly() ? Promise.resolve(false)
+  : fetch("api/groq").then(r => r.ok ? r.json() : {}).then(d => { if (d.model) PROVIDERS.free.model = "Groq · " + d.model; return !!d.ready; }).catch(() => false);
+let freeOK = false;
+function inClaudeEarly(){ return !!window.claude; }
 let draftProv = conn?.provider || "groq";
 
-async function providerText(prompt, signal){
-  const P = PROVIDERS[conn.provider], model = conn.model || P.model;
+async function providerText(prompt, signal, c = conn){
+  const P = PROVIDERS[c.provider], model = c.model || P.model;
   let url, init, pick;
+  if (P.kind === "free"){
+    let r;
+    try { r = await fetch("api/groq", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({prompt}), signal}); }
+    catch (e) { throw {code: e && e.name === "AbortError" ? "cancelled" : "network"}; }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw {code: d.error || "upstream_error"};
+    return d.text;
+  }
   if (P.kind === "anthropic"){
     url = "https://api.anthropic.com/v1/messages";
     const body = {model, max_tokens: 16000, messages:[{role:"user", content: prompt}]};
     if (/opus-5|sonnet-5|haiku-5|fable/.test(model)) body.output_config = {effort:"low"};
-    init = {headers:{"content-type":"application/json","x-api-key":conn.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"}, body};
+    init = {headers:{"content-type":"application/json","x-api-key":c.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"}, body};
     pick = d => (d.content || []).filter(x => x.type === "text").map(x => x.text).join("");
   } else if (P.kind === "gemini"){
-    url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(conn.key)}`;
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(c.key)}`;
     init = {headers:{"content-type":"application/json"}, body:{contents:[{role:"user", parts:[{text: prompt}]}]}};
     pick = d => (d.candidates?.[0]?.content?.parts || []).map(x => x.text || "").join("");
   } else {
-    const base = (conn.provider === "custom" ? conn.base : P.base || "").replace(/\/+$/, "");
+    const base = (c.provider === "custom" ? c.base : P.base || "").replace(/\/+$/, "");
     if (!base) throw {code:"no_base"};
     url = base + "/chat/completions";
     const h = {"content-type":"application/json"};
-    if (conn.key) h.authorization = "Bearer " + conn.key;
-    if (conn.provider === "openrouter"){ h["X-Title"] = "PromptDoc"; }
+    if (c.key) h.authorization = "Bearer " + c.key;
+    if (c.provider === "openrouter"){ h["X-Title"] = "PromptDoc"; }
     init = {headers:h, body:{model, messages:[{role:"user", content: prompt}]}};
     pick = d => d.choices?.[0]?.message?.content || "";
   }
@@ -1660,9 +1912,9 @@ async function providerText(prompt, signal){
   if (!text.trim()) throw {code:"empty_completion"};
   return text;
 }
-function providerAI(){
+function providerAI(c = conn){
   const call = async (prompt, opts = {}) => {
-    const text = await providerText(prompt, opts.signal);
+    const text = await providerText(prompt, opts.signal, c);
     if (opts.onText) opts.onText({text, delta:text});
     return {text, truncated:false};
   };
@@ -1679,17 +1931,23 @@ const claudePromise = (async () => {
   try { if (inClaude){ const s = await window.claude.use("sample"); if (s) return s; } } catch {}
   return null;
 })();
-async function getAI(){ return conn ? providerAI() : await claudePromise; }
+async function getAI(){
+  if (conn) return providerAI(conn);
+  if (await freeReady) return providerAI({provider:"free"});
+  return await claudePromise;
+}
 const samplePromise = claudePromise; // kept for older code paths
 
 function showConn(){
   const c = $("#conn");
-  if (conn){ c.hidden = false; c.textContent = `${PROVIDERS[conn.provider].label} · ${conn.model}`; $("#connect").textContent = "Change AI"; }
+  if (conn){ c.hidden = false; c.textContent = conn.provider === "free" ? `Free AI · ${PROVIDERS.free.model}` : `${PROVIDERS[conn.provider].label} · ${conn.model}`; $("#connect").textContent = "Change AI"; }
+  else if (freeOK){ c.hidden = false; c.textContent = `Free AI · ${PROVIDERS.free.model}`; $("#connect").textContent = "Use my own key"; }
   else { c.hidden = true; $("#connect").textContent = "Connect AI"; }
 }
 function renderProvs(){
   const box = $("#provs"); box.replaceChildren();
   for (const [id, P] of Object.entries(PROVIDERS)){
+    if (id === "free" && !freeOK) continue;
     const b = document.createElement("button");
     b.className = "prov"; b.setAttribute("role","radio"); b.setAttribute("aria-checked", String(id === draftProv));
     b.innerHTML = PROV_ICONS[id] || ""; b.append(P.label); const sm = document.createElement("small"); sm.textContent = P.note; b.append(sm);
@@ -1701,7 +1959,14 @@ function fillConnect(fromSaved){
   const P = PROVIDERS[draftProv];
   renderProvs();
   const same = conn && conn.provider === draftProv;
-  $("#ai-key").placeholder = P.ph;
+  const isFree = draftProv === "free";
+  $("#ai-key").closest(".field").hidden = isFree; $("#ai-model").closest(".two").hidden = isFree; $("#ai-remember").closest(".chk").hidden = isFree;
+  $("#ai-save").textContent = isFree ? "Use free AI" : "Save and test";
+  if (isFree){
+    const help = $("#ai-help"); help.textContent = "Runs on PromptDoc's shared Groq connection. Free for everyone, with daily limits shared by all visitors. Your prompt is sent to Groq to be checked.";
+    $("#ai-status").textContent = ""; return;
+  }
+  $("#ai-key").placeholder = P.ph || "";
   $("#ai-key").value = same ? conn.key : "";
   $("#ai-model").value = same ? conn.model : P.model;
   $("#base-wrap").hidden = draftProv !== "custom";
@@ -1713,7 +1978,7 @@ function fillConnect(fromSaved){
   $("#ai-status").textContent = "";
 }
 function openConnect(){
-  $("#connect-panel").hidden = false; draftProv = conn?.provider || draftProv; fillConnect(true);
+  $("#connect-panel").hidden = false; draftProv = conn?.provider || (freeOK ? "free" : draftProv); fillConnect(true);
   $("#ai-key").focus();
 }
 $("#connect").addEventListener("click", () => { const p = $("#connect-panel"); if (p.hidden) openConnect(); else p.hidden = true; });
@@ -1721,6 +1986,7 @@ $("#ai-close").addEventListener("click", () => { $("#connect-panel").hidden = tr
 $("#ai-forget").addEventListener("click", () => { conn = null; store.clear(); showConn(); fillConnect(false); $("#ai-status").textContent = "Key removed from this browser."; });
 $("#ai-save").addEventListener("click", async () => {
   const key = $("#ai-key").value.trim(), model = $("#ai-model").value.trim() || PROVIDERS[draftProv].model, base = $("#ai-base").value.trim();
+  if (draftProv === "free"){ conn = null; store.clear(); showConn(); $("#ai-status").textContent = "Using free AI."; setTimeout(() => { $("#connect-panel").hidden = true; }, 600); return; }
   if (!key && draftProv !== "custom"){ $("#ai-status").textContent = "Paste your API key first."; return; }
   if (draftProv === "custom" && !base){ $("#ai-status").textContent = "Add the base URL of your OpenAI-compatible server."; return; }
   const prev = conn;
@@ -1748,6 +2014,7 @@ claudePromise.then(s => {
   else if (inClaude){ aiOff = true; $("#foot-note").textContent = "Runs entirely in your browser. Nothing you paste leaves this page."; }
 });
 showConn();
+freeReady.then(ok => { freeOK = ok; if (ok){ $("#foot-note").textContent = "Free AI checks run on PromptDoc's shared Groq connection. Your own key, if you add one, stays in your browser."; } showConn(); });
 
 function disableAI(msg){
   aiOff = true;
@@ -1862,8 +2129,16 @@ $("#run").addEventListener("click", async () => {
 $("#stop").addEventListener("click", () => runCtl && runCtl.abort());
 
 /* ================= Start ================= */
+{
+  const d = readJSON(DRAFT_KEY);
+  if (d && typeof d.text === "string" && d.text.trim()){
+    if (TYPES[d.type]) typeId = d.type;
+    promptEl.value = d.text;
+    $("#saved").textContent = "Restored your last draft";
+  } else promptEl.value = T().weak;
+  lastText = promptEl.value;
+}
 renderTypes(); renderGuide(); renderTest();
-promptEl.value = T().weak;
 refresh();
 </script>
 
