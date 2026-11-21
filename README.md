@@ -6,6 +6,10 @@ A prompt checker for AI assistants, WhatsApp bots, voice agents and chatbots. Pi
 
 Everything runs in the visitor's browser: no server and no cost to run the site. The whole app is `index.html`.
 
+## Templates
+
+Click **Templates** to start from a strong prompt for each type: voice agents (outbound lead follow-up and appointment reminders, inbound receptionist and customer support, with an Inbound / Outbound filter), WhatsApp bots (orders, appointment booking, order tracking, real estate leads), chatbots (app support, shopping assistant, school admissions, staff HR helpdesk) and everyday prompts (social post, complaint reply, meeting summary, product description, explainer).
+
 ## AI check, rewrite and side-by-side test (bring your own key)
 
 Click **Connect AI** and pick a provider: OpenAI (ChatGPT models), Claude, Gemini (free tier), Groq (free tier), OpenRouter, or any OpenAI-compatible server (for example a local Ollama). Paste your own API key. The key is kept in your browser only, and requests go straight from your browser to that provider, never through this site.
