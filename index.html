@@ -145,6 +145,23 @@ input[type="text"]:focus-visible{outline:none;border-color:var(--ink)}
 footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:16px}
 @media (prefers-reduced-motion:reduce){.sw .pill i{transition:none}}
 @media (max-width:600px){.paper,textarea{min-height:320px}}
+.connect{border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.connect h3{font-family:var(--f-display);font-size:24px;line-height:1.1}
+.provs{display:flex;flex-wrap:wrap;gap:6px}
+.prov{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13.5px;font-weight:500}
+.prov:hover{border-color:var(--ink)}
+.prov[aria-checked="true"]{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.prov small{font-weight:400;opacity:.65;margin-left:4px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12px;font-weight:500;color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+input[type="password"]{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:14px var(--f-mono);padding:11px 13px}
+input[type="password"]:focus-visible,.connect input[type="text"]:focus-visible{outline:none;border-color:var(--ink)}
+.connect input[type="text"]{font-family:var(--f-mono);font-size:13.5px;padding:11px 13px}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.connect a{color:var(--ink)}
+.conn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
+.conn::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good)}
 </style>
 
 </head>
@@ -188,7 +205,26 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
       <p class="src" id="src"></p>
       <div class="row">
         <button class="btn" id="ask" hidden><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l1.7 4.3L14 7l-4.3 1.7L8 13l-1.7-4.3L2 7l4.3-1.7z" fill="currentColor"/></svg>Check with AI</button>
+        <button class="link" id="connect" hidden>Connect AI</button>
+        <span class="conn" id="conn" hidden></span>
         <span class="note" id="ask-note" aria-live="polite"></span>
+      </div>
+      <div class="connect" id="connect-panel" hidden>
+        <h3>Use <em>your</em> AI</h3>
+        <div class="provs" id="provs" role="radiogroup" aria-label="AI provider"></div>
+        <div class="field"><label for="ai-key">API key</label><input type="password" id="ai-key" autocomplete="off" spellcheck="false"></div>
+        <div class="two">
+          <div class="field"><label for="ai-model">Model</label><input type="text" id="ai-model" spellcheck="false"></div>
+          <div class="field" id="base-wrap" hidden><label for="ai-base">Base URL</label><input type="text" id="ai-base" spellcheck="false" placeholder="http://localhost:11434/v1"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="ai-remember" checked> Remember on this device</label>
+        <div class="row">
+          <button class="btn" id="ai-save">Save and test</button>
+          <button class="link" id="ai-forget">Forget key</button>
+          <button class="link" id="ai-close">Close</button>
+          <span class="note" id="ai-status" aria-live="polite"></span>
+        </div>
+        <p class="note" id="ai-help"></p>
       </div>
       <div class="label">Fix next</div>
       <ul class="fixes" id="fixes"></ul>
@@ -959,34 +995,149 @@ function showTab(id){
 }
 
 /* ================= AI (Claude, when this page is opened in Claude) ================= */
-/* AI comes from Claude when the page is opened in Claude, or from this site's api/ai function when it is deployed with an API key. */
-function apiAI(){
+/* ================= AI providers =================
+   1) A provider the visitor connects with their own key (requests go straight from the browser to the provider).
+   2) Otherwise Claude, when the page is opened inside Claude. */
+const PROVIDERS = {
+  openai:     {label:"OpenAI", note:"ChatGPT models", model:"gpt-5-mini", kind:"openai", base:"https://api.openai.com/v1", key:"https://platform.openai.com/api-keys", ph:"sk-…"},
+  anthropic:  {label:"Claude", note:"Anthropic", model:"claude-opus-5-5", kind:"anthropic", key:"https://console.anthropic.com/settings/keys", ph:"sk-ant-…"},
+  gemini:     {label:"Gemini", note:"free tier", model:"gemini-flash-latest", kind:"gemini", key:"https://aistudio.google.com/apikey", ph:"AIza…"},
+  groq:       {label:"Groq", note:"free tier", model:"openai/gpt-oss-120b", kind:"openai", base:"https://api.groq.com/openai/v1", key:"https://console.groq.com/keys", ph:"gsk_…"},
+  openrouter: {label:"OpenRouter", note:"any model", model:"openrouter/auto", kind:"openai", base:"https://openrouter.ai/api/v1", key:"https://openrouter.ai/keys", ph:"sk-or-…"},
+  custom:     {label:"Custom", note:"OpenAI-compatible", model:"llama3.1", kind:"openai", base:"", key:null, ph:"key (optional for local servers)"},
+};
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem("promptdoc.ai") || "null"); } catch { return null; } },
+  set(v){ try { localStorage.setItem("promptdoc.ai", JSON.stringify(v)); } catch {} },
+  clear(){ try { localStorage.removeItem("promptdoc.ai"); } catch {} }
+};
+let conn = store.get();           // {provider, key, model, base}
+let draftProv = conn?.provider || "groq";
+
+async function providerText(prompt, signal){
+  const P = PROVIDERS[conn.provider], model = conn.model || P.model;
+  let url, init, pick;
+  if (P.kind === "anthropic"){
+    url = "https://api.anthropic.com/v1/messages";
+    const body = {model, max_tokens: 16000, messages:[{role:"user", content: prompt}]};
+    if (/opus-5|sonnet-5|haiku-5|fable/.test(model)) body.output_config = {effort:"low"};
+    init = {headers:{"content-type":"application/json","x-api-key":conn.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"}, body};
+    pick = d => (d.content || []).filter(x => x.type === "text").map(x => x.text).join("");
+  } else if (P.kind === "gemini"){
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(conn.key)}`;
+    init = {headers:{"content-type":"application/json"}, body:{contents:[{role:"user", parts:[{text: prompt}]}]}};
+    pick = d => (d.candidates?.[0]?.content?.parts || []).map(x => x.text || "").join("");
+  } else {
+    const base = (conn.provider === "custom" ? conn.base : P.base || "").replace(/\/+$/, "");
+    if (!base) throw {code:"no_base"};
+    url = base + "/chat/completions";
+    const h = {"content-type":"application/json"};
+    if (conn.key) h.authorization = "Bearer " + conn.key;
+    if (conn.provider === "openrouter"){ h["X-Title"] = "PromptDoc"; }
+    init = {headers:h, body:{model, messages:[{role:"user", content: prompt}]}};
+    pick = d => d.choices?.[0]?.message?.content || "";
+  }
+  let r;
+  try { r = await fetch(url, {method:"POST", headers:init.headers, body:JSON.stringify(init.body), signal}); }
+  catch (e) { throw {code: e && e.name === "AbortError" ? "cancelled" : "network"}; }
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 || r.status === 403) throw {code:"bad_key"};
+  if (r.status === 404) throw {code:"bad_model"};
+  if (r.status === 429) throw {code:"rate_limited"};
+  if (!r.ok) throw {code:"upstream_error", detail: d?.error?.message || ""};
+  const text = pick(d);
+  if (!text.trim()) throw {code:"empty_completion"};
+  return text;
+}
+function providerAI(){
   const call = async (prompt, opts = {}) => {
-    let r;
-    try { r = await fetch("api/ai", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({prompt}), signal: opts.signal}); }
-    catch (e) { throw {code: e && e.name === "AbortError" ? "cancelled" : "upstream_error"}; }
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || d.error) throw {code: d.error || "upstream_error"};
-    if (opts.onText) opts.onText({text: d.text, delta: d.text});
-    return {text: d.text, truncated: !!d.truncated};
+    const text = await providerText(prompt, opts.signal);
+    if (opts.onText) opts.onText({text, delta:text});
+    return {text, truncated:false};
   };
   call.json = async (prompt, opts) => {
-    const {text} = await call(prompt, opts);
-    const s = text.indexOf("{"), e = text.lastIndexOf("}");
-    try { return JSON.parse(text.slice(s, e + 1)); } catch { throw {code:"invalid_json"}; }
+    const {text} = await call(prompt + "\n\nReply with only the JSON object, no other text.", opts);
+    const a = text.indexOf("{"), b = text.lastIndexOf("}");
+    try { return JSON.parse(text.slice(a, b + 1)); } catch { throw {code:"invalid_json"}; }
   };
   return call;
 }
-const samplePromise = (async () => {
-  try { if (window.claude){ const s = await window.claude.use("sample"); if (s) return s; } } catch {}
-  try { const r = await fetch("api/ai"); const d = await r.json(); if (d && d.ready) return apiAI(); } catch {}
+
+const inClaude = !!window.claude;
+const claudePromise = (async () => {
+  try { if (inClaude){ const s = await window.claude.use("sample"); if (s) return s; } } catch {}
   return null;
 })();
-samplePromise.then(s => {
-  if (s){ $("#ask").hidden = false; $("#t-test").hidden = false; return; }
-  aiOff = true;
-  $("#foot-note").textContent = "Runs entirely in your browser. Nothing you paste leaves this page.";
+async function getAI(){ return conn ? providerAI() : await claudePromise; }
+const samplePromise = claudePromise; // kept for older code paths
+
+function showConn(){
+  const c = $("#conn");
+  if (conn){ c.hidden = false; c.textContent = `${PROVIDERS[conn.provider].label} · ${conn.model}`; $("#connect").textContent = "Change AI"; }
+  else { c.hidden = true; $("#connect").textContent = "Connect AI"; }
+}
+function renderProvs(){
+  const box = $("#provs"); box.replaceChildren();
+  for (const [id, P] of Object.entries(PROVIDERS)){
+    const b = document.createElement("button");
+    b.className = "prov"; b.setAttribute("role","radio"); b.setAttribute("aria-checked", String(id === draftProv));
+    b.append(P.label); const sm = document.createElement("small"); sm.textContent = P.note; b.append(sm);
+    b.addEventListener("click", () => { draftProv = id; fillConnect(false); });
+    box.append(b);
+  }
+}
+function fillConnect(fromSaved){
+  const P = PROVIDERS[draftProv];
+  renderProvs();
+  const same = conn && conn.provider === draftProv;
+  $("#ai-key").placeholder = P.ph;
+  $("#ai-key").value = same ? conn.key : "";
+  $("#ai-model").value = same ? conn.model : P.model;
+  $("#base-wrap").hidden = draftProv !== "custom";
+  $("#ai-base").value = same ? (conn.base || "") : "";
+  const help = $("#ai-help"); help.replaceChildren();
+  help.append("Your key stays in this browser. Requests go straight from your browser to the provider, never through this site. ");
+  if (P.key){ const a = document.createElement("a"); a.href = P.key; a.target = "_blank"; a.rel = "noopener"; a.textContent = `Get a ${P.label} key`; help.append(a); }
+  if (draftProv === "openai") help.append(". A ChatGPT Plus plan does not include API access; API keys come from the OpenAI platform.");
+  $("#ai-status").textContent = "";
+}
+function openConnect(){
+  $("#connect-panel").hidden = false; draftProv = conn?.provider || draftProv; fillConnect(true);
+  $("#ai-key").focus();
+}
+$("#connect").addEventListener("click", () => { const p = $("#connect-panel"); if (p.hidden) openConnect(); else p.hidden = true; });
+$("#ai-close").addEventListener("click", () => { $("#connect-panel").hidden = true; });
+$("#ai-forget").addEventListener("click", () => { conn = null; store.clear(); showConn(); fillConnect(false); $("#ai-status").textContent = "Key removed from this browser."; });
+$("#ai-save").addEventListener("click", async () => {
+  const key = $("#ai-key").value.trim(), model = $("#ai-model").value.trim() || PROVIDERS[draftProv].model, base = $("#ai-base").value.trim();
+  if (!key && draftProv !== "custom"){ $("#ai-status").textContent = "Paste your API key first."; return; }
+  if (draftProv === "custom" && !base){ $("#ai-status").textContent = "Add the base URL of your OpenAI-compatible server."; return; }
+  const prev = conn;
+  conn = {provider: draftProv, key, model, base};
+  $("#ai-save").disabled = true; $("#ai-status").textContent = "Testing…";
+  try {
+    await providerText('Reply with the single word: ready', undefined);
+    if ($("#ai-remember").checked) store.set(conn); else store.clear();
+    showConn(); $("#ai-status").textContent = "Connected.";
+    aiOff = false; $("#ask").disabled = false; $("#run").disabled = false; $("#ask-note").textContent = ""; $("#run-note").textContent = "";
+    setTimeout(() => { $("#connect-panel").hidden = true; }, 700);
+  } catch (e) {
+    conn = prev;
+    $("#ai-status").textContent = errCopy(e) || "That did not work. Check the key and model.";
+  } finally { $("#ai-save").disabled = false; }
 });
+
+/* What to show at start */
+if (!inClaude){
+  $("#ask").hidden = false; $("#t-test").hidden = false; $("#connect").hidden = false;
+  $("#foot-note").textContent = "Runs in your browser. With Connect AI, requests go straight to the provider you choose.";
+}
+claudePromise.then(s => {
+  if (s){ $("#ask").hidden = false; $("#t-test").hidden = false; }
+  else if (inClaude){ aiOff = true; $("#foot-note").textContent = "Runs entirely in your browser. Nothing you paste leaves this page."; }
+});
+showConn();
+
 function disableAI(msg){
   aiOff = true;
   $("#ask").disabled = true; $("#run").disabled = true;
@@ -995,12 +1146,16 @@ function disableAI(msg){
 function errCopy(e){
   switch (e && e.code){
     case "not_granted": case "sampling_disabled": case "not_declared": case "capability_disabled": case "capability_removed":
-      disableAI("AI is turned off for this page. The quick check still works."); return null;
+      if (conn) return "AI is turned off for this page."; disableAI("AI is turned off for this page. The quick check still works."); return null;
     case "rate_limited": return "Too many requests. Wait a minute, then try again.";
     case "session_expired": return "Your Claude session expired. Sign in again, then retry.";
     case "refused": return "Claude declined this prompt. Try rewording it.";
     case "invalid_json": return "The check came back garbled. Press the button again.";
     case "prompt_too_large": return "This prompt is too long to check in one go. Check it in parts.";
+    case "bad_key": return "Your API key was rejected. Open Connect AI and check it.";
+    case "bad_model": return "That model name was not found. Change it in Connect AI.";
+    case "network": return "Could not reach the provider from this browser. Check your connection or the base URL.";
+    case "no_base": return "Add a base URL for your custom provider.";
     case "cancelled": return "";
     default: return "Could not reach Claude. Press the button again.";
   }
@@ -1036,7 +1191,7 @@ PROMPT>>>`;
 $("#ask").addEventListener("click", async () => {
   const text = promptEl.value.trim();
   if (!text){ $("#ask-note").textContent = "Paste a prompt first."; return; }
-  const sample = await samplePromise; if (!sample) return;
+  const sample = await getAI(); if (!sample){ if (!inClaude) openConnect(); return; }
   const id = typeId, btn = $("#ask");
   aiBusy = true; btn.disabled = true; $("#ask-note").textContent = "Reading your prompt…";
   try {
@@ -1080,7 +1235,7 @@ let runCtl = null;
 $("#run").addEventListener("click", async () => {
   const before = promptEl.value.trim(), after = rxEl.value.trim();
   if (!before || !after){ $("#run-note").textContent = "Add a prompt above first."; return; }
-  const sample = await samplePromise; if (!sample) return;
+  const sample = await getAI(); if (!sample){ if (!inClaude) openConnect(); return; }
   runCtl = new AbortController(); const sig = runCtl.signal;
   $("#run").disabled = true; $("#stop").hidden = false; $("#run-note").textContent = "Running both…";
   const isChat = !!T().test;
