@@ -26,6 +26,12 @@ Click **Templates** to start from a strong prompt for each type: voice agents (o
 
 All visitors share the Groq free tier's limits. When they run out, visitors see "The AI is busy right now" and can try again a minute later. Until the secret is set, the AI button and the Test tab stay hidden.
 
+## Compliance checklist
+
+For WhatsApp bots, voice agents and chatbots, the **Compliance** tab lists the rules that commonly apply where your customers are (Nigeria, EU & UK, United States, Canada) and in your industry (general, healthcare, finance & lending, legal & immigration, real estate, education). Each rule shows whether the prompt covers it and the law behind it (for example NDPA 2023, GDPR, the EU AI Act, TCPA, CRTC rules, HIPAA), and **Add** writes the wording into a `# COMPLIANCE` section. It also flags risky instructions such as hiding that the agent is an AI, pressure tactics, guaranteed outcomes, collecting PINs or card numbers, or giving medical, legal or financial advice. **Improve with AI** includes the selected rules in its rewrite.
+
+This is a checklist to help write safer prompts, not legal advice. Laws change and depend on each business, so have a legal or compliance team review an agent before it goes live.
+
 ## Never lose a prompt
 
 - The prompt is saved in the browser as you type and restored on the next visit.

@@ -169,6 +169,28 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
 .hist li button{grid-row:1 / 3;grid-column:2}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom, 0px));z-index:50;display:flex;align-items:center;gap:14px;background:var(--btn);color:var(--btn-ink);border-radius:999px;padding:10px 12px 10px 18px;box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:14px;max-width:calc(100% - 32px)}
 .toast button{border:0;border-radius:999px;padding:6px 14px;background:var(--btn-ink);color:var(--btn);font-weight:600;cursor:pointer}
+.comp-chip{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;text-align:left;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--bg);cursor:pointer;width:100%}
+.comp-chip:hover{border-color:var(--ink)}
+.comp-chip b{font-weight:500;color:var(--c)}
+.comp-chip span{font-size:12.5px;color:var(--muted);grid-column:1}
+.comp-chip .go{grid-column:2;grid-row:1 / 3;align-self:center;color:var(--ink);font-size:13px}
+.comp-pick{display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.comp-pick .opt{padding:5px 12px;font-size:13.5px}
+.comp-sum b{font-family:var(--f-display);font-weight:400;font-size:28px;line-height:1.1}
+.comp-risks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.comp-risks li{padding:10px 14px;border-radius:12px;background:color-mix(in srgb, var(--bad) 10%, transparent);font-size:13.5px}
+.comp-risks li::before{content:"Risk · ";font-weight:600;color:var(--bad)}
+.comp-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:0 28px}
+.comp-list li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.ci{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;border:1.5px solid var(--faint);color:#fff;margin-top:1px}
+.c-ok .ci{background:var(--good);border-color:var(--good)}
+.c-conflict .ci{background:var(--bad);border-color:var(--bad)}
+.comp-list b{font-weight:500}
+.laws{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.laws span{font:10.5px var(--f-mono);padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.comp-list p{font-size:13px;color:var(--muted)}
+.comp-list .btn{padding:6px 14px;font-size:13px}
 .link.armed{color:var(--bad);background:color-mix(in srgb, var(--bad) 10%, transparent)}
 .gallery{border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:14px}
 .gal-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -273,12 +295,15 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
       <ul class="fixes" id="fixes"></ul>
       <div class="label">Flags</div>
       <ul class="flags" id="flags"></ul>
+      <div class="label" id="comp-label">Compliance</div>
+      <button class="comp-chip" id="comp-chip"></button>
     </div>
   </section>
 
   <section class="lower" aria-label="Improve, test and learn">
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="t-improve" aria-controls="p-improve" aria-selected="true">Improve</button>
+      <button class="tab" role="tab" id="t-comp" aria-controls="p-comp" aria-selected="false">Compliance</button>
       <button class="tab" role="tab" id="t-test" aria-controls="p-test" aria-selected="false" hidden>Test it</button>
       <button class="tab" role="tab" id="t-guide" aria-controls="p-guide" aria-selected="false">Guide</button>
     </div>
@@ -295,6 +320,17 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
       <div class="row"><span class="note">Score after the fix:</span><span class="tag" id="after-score">–</span><span class="note">Before:</span><span class="tag" id="before-score">–</span></div>
     </div>
 
+    <div class="pane" role="tabpanel" id="p-comp" aria-labelledby="t-comp" hidden>
+      <p class="note" id="comp-na">Compliance checks are for customer-facing agents. Choose WhatsApp bot, Voice agent or Chatbot above.</p>
+      <div id="comp-body" style="display:flex;flex-direction:column;gap:18px">
+        <p class="note" style="max-width:76ch">Check that your agent follows the privacy, consumer and industry rules where your customers are. This is a checklist to help you write safer prompts, not legal advice. Laws change and depend on your situation, so have your legal or compliance team review the agent before it goes live.</p>
+        <div class="comp-pick"><span class="label">Where your customers are</span><div class="chips" id="comp-regions"></div></div>
+        <div class="comp-pick"><span class="label">Industry</span><div class="chips" id="comp-ind"></div></div>
+        <div class="row comp-sum"><b id="comp-score"></b><span class="note" id="comp-sub"></span><span class="spacer"></span><button class="btn" id="comp-addall">Add all missing</button></div>
+        <ul class="comp-risks" id="comp-risks"></ul>
+        <ul class="comp-list" id="comp-list"></ul>
+      </div>
+    </div>
     <div class="pane" role="tabpanel" id="p-test" aria-labelledby="t-test" hidden>
       <p class="note" id="test-intro"></p>
       <div id="test-msg-wrap" style="display:flex;flex-direction:column;gap:6px">
@@ -1320,7 +1356,7 @@ const SECT = {
   edge:{head:/\b(silence|edge|wrong|monologue|delay|tool execution)\b/i, kw:/\b(silence|wrong number|still there|voicemail|voice notes?|off.?topic|angry|unclear|lost you)\b/i},
   objections:{head:/\b(objections?|reactions)\b/i, kw:/^\s*["“].+["”]\s*(→|->)/},
   faq:{head:/\b(faqs?|objections?|common questions)\b/i, kw:/^\s*["“].+["”]\s*(→|->)/},
-  guard:{head:/\b(guardrails?)\b/i, kw:/^\s*[-*•]?\s*(NEVER|ALWAYS|ONLY)\b/},
+  guard:{head:/\b(guardrails?|compliance)\b/i, kw:/^\s*[-*•]?\s*(NEVER|ALWAYS|ONLY)\b/},
   task:{head:/\b(task|goal)\b/i, kw:VERB},
   output:{head:/\b(output|format)\b/i, kw:/\b(format|bullets?|versions?|\d+\s*(words|options|ideas|lines))\b/i},
 };
@@ -1437,6 +1473,8 @@ function renderReport(res){
   if (!list.length){ const li = document.createElement("li"); li.className = "ok"; li.textContent = "Nothing flagged."; fl.append(li); }
   else for (const f of list){ const li = document.createElement("li"); li.textContent = String(f); fl.append(li); }
   if (view === "map") renderMap();
+  renderComplianceSummary();
+  if (!$("#p-comp").hidden) renderCompliance();
 }
 
 /* Template: if the prompt is already sectioned, append the missing sections; otherwise wrap it in the full structure. */
@@ -1764,6 +1802,272 @@ $("#hist-clear").addEventListener("click", () => {
 });
 window.addEventListener("pagehide", saveDraft);
 
+/* ================= Compliance =================
+   A checklist of rules that commonly apply to customer-facing AI agents, by region and industry.
+   It helps people write safer prompts. It is not legal advice. */
+const REGIONS = {ng:"Nigeria", eu:"EU & UK", us:"United States", ca:"Canada"};
+const INDUSTRIES = {general:"General business", health:"Healthcare", finance:"Finance & lending", legal:"Legal & immigration", realestate:"Real estate", education:"Education"};
+const AGENT = ["voice","whatsapp","chatbot"];
+const CONSENT_RE = /\b(consent\w*|agreed to|opted in|asked (us )?to (call|contact)|filled (the|a|our) form|enquir\w+|signed up)\b/i;
+const HOURS_RE = /\b(calling hours|only call between|between \d{1,2}(:\d\d)?\s?(am|pm)?\s*(and|to|-|–)\s*\d|from \d{1,2}\s?(am|pm) to \d)/i;
+const NEG = /\b(never|don'?t|do not|no|not|avoid|refuse)\b/i;
+
+const COMPLIANCE = [
+  // ---- Everywhere ----
+  {id:"ai", title:"Say it is an AI", laws:["EU AI Act","FCC (US)","Good practice"], types:AGENT,
+   why:"People must know they are talking to an AI. The EU AI Act requires it, and US regulators treat AI voices on calls as artificial voices.",
+   detect:/\b(say|tell|mention|disclose)\b[^.\n]{0,40}\ban? ai\b|\byou are an ai\b|\bai (voice |support )?(agent|assistant)\b|\bvirtual assistant\b/i,
+   conflict:/\b(do not|don'?t|never)\s+(reveal|say|tell|admit|mention|disclose)\b[^\n]{0,60}\b(ai|a bot|artificial)\b/i,
+   clause:"ALWAYS say you are an AI assistant at the start of the conversation, and answer honestly whenever someone asks if they are talking to a person."},
+  {id:"identify", title:"Say who you represent and why", laws:["TCPA (US)","CRTC (Canada)","Good practice"], types:AGENT,
+   why:"The person should know which business is contacting them and for what reason.",
+   detect:/\bon behalf of\b|\bcalling from\b|\b(assistant|agent) (for|from|at) [A-Z]|\bfor [A-Z][\w'’]+\b[^.\n]{0,40}\byour goal\b/i,
+   clause:"At the start, say the name of the business you represent and why you are getting in touch."},
+  {id:"secrets", title:"Never ask for PINs, OTPs or card numbers", laws:["NDPA 2023","GDPR","PCI DSS"], types:AGENT,
+   why:"Real businesses never need these in a chat or call. Asking for them looks like fraud, and storing card data breaks card-security rules.",
+   detect:/\b(never|do not|don'?t)\b[^.\n]{0,50}\b(pins?|otps?|passwords?|card (numbers?|details)|bvn|cvv)\b/i,
+   clause:"NEVER ask for or accept PINs, OTPs, passwords, CVVs, full card numbers or BVN. If someone starts to share them, stop them politely and say you never need this."},
+  {id:"minimise", title:"Collect only what you need", laws:["NDPA 2023","GDPR"], types:AGENT,
+   why:"Privacy laws require collecting the minimum personal data for the purpose.",
+   detect:/\bonly (ask|collect|request)\b|\bminimum (information|data)\b|\bno more (information|data)\b|\bonly the (details|information)\b/i,
+   clause:"Only ask for the personal details you need to complete the task. Do not ask about religion, ethnicity, health or income unless the task requires it."},
+  {id:"optout", outbound:true, title:"Honour stop requests", laws:["NDPA 2023","GDPR","TCPA (US)"], types:["voice","whatsapp"],
+   why:"When someone asks you to stop contacting them, you must stop and remember it.",
+   detect:/\b(stop calling|opt.?out|unsubscribe|types? stop|says? stop|do not (call|contact|message)|remove (them|their number)|not interested)\b/i,
+   clause:"If someone asks you to stop contacting them, apologise, confirm they will not be contacted again, record the request, and end the conversation."},
+  {id:"human", title:"Offer a human", laws:["Consumer protection","Good practice"], types:AGENT,
+   why:"People need a way to reach a person, especially for complaints and decisions that affect them.",
+   detect:/\b(human|real person|team member|transfer|hand ?off|handoff_to_human|staff)\b/i,
+   clause:"If someone asks for a person, or the issue is a complaint, urgent, or beyond what you can handle, offer to transfer them or arrange a call back from a human."},
+  {id:"truth", title:"No invented facts or guarantees", laws:["FCCPA (Nigeria)","FTC Act (US)","Consumer law"], types:AGENT,
+   why:"Made-up prices, availability or promised results are misleading advertising.",
+   detect:/\b(never|do not|don'?t)\s+(invent|make up|guess|promise|guarantee)\b/i,
+   clause:"NEVER invent prices, facts, availability or outcomes, and never promise results. If you don't know, say so and offer to find out."},
+  {id:"privacy", title:"Explain how data is used", laws:["NDPA 2023","GDPR"], types:AGENT,
+   why:"When you collect personal data, people should be told why and where to read the privacy policy.",
+   detect:/\bprivacy (policy|notice)\b|\bhow (we|your) (data|information)\b|\bdata (is|will be) used\b/i,
+   clause:"When you collect personal details, briefly say why you need them and where to find the privacy policy: [privacy policy link or phone]."},
+  {id:"emergency", title:"Handle emergencies and distress", laws:["Duty of care"], types:AGENT,
+   why:"An agent must not carry on with a script when someone is in danger.",
+   detect:/\b(emergenc\w*|distress\w*|in danger|self-harm|crisis)\b/i,
+   clause:"If someone says they are in danger, seriously unwell or in crisis, stop the normal flow, tell them to contact local emergency services (for example 112), and hand off to a human."},
+  {id:"recording", title:"Say if the call is recorded", laws:["NDPA 2023","GDPR","US state laws"], types:["voice"],
+   why:"Many laws require telling people when a call is recorded.",
+   detect:/\brecord(ed|ing)\b/i,
+   clause:"If calls are recorded, say so near the start: \"This call may be recorded for quality and training.\" If the person objects, offer to continue without recording or to call back."},
+
+  // ---- Nigeria ----
+  {id:"ng_consent", region:"ng", outbound:true, title:"Contact only people who agreed", laws:["NDPA 2023"], types:["voice","whatsapp"],
+   why:"The Nigeria Data Protection Act needs a lawful basis, usually consent, for marketing contact.",
+   detect:CONSENT_RE,
+   clause:"Only contact people who agreed to hear from us or asked us to get in touch. If someone says they never agreed, apologise, stop, and record it so they are not contacted again."},
+  {id:"ng_dnd", region:"ng", outbound:true, title:"Respect Do-Not-Disturb (DND)", laws:["NCC DND"], types:["voice","whatsapp"],
+   why:"Numbers registered for Do-Not-Disturb must not receive promotional calls or messages.",
+   detect:/\b(dnd|do.not.disturb|do-not-contact list)\b/i,
+   clause:"Never send promotional calls or messages to numbers on our do-not-contact list or registered for Do-Not-Disturb (DND)."},
+
+  // ---- EU & UK ----
+  {id:"eu_rights", region:"eu", title:"Explain data rights", laws:["GDPR","UK GDPR"], types:AGENT,
+   why:"People can ask to see, correct or delete their data, and must be told how.",
+   detect:/\b(access|delete|erase|correct)\w*\b[^.\n]{0,40}\b(data|information)\b|\bright to (access|erasure|be forgotten)\b/i,
+   clause:"If someone asks what data we hold about them, or wants it corrected or deleted, explain how to request it: [privacy email]. Never refuse or argue."},
+  {id:"eu_consent", region:"eu", outbound:true, title:"Consent for marketing calls and messages", laws:["PECR (UK)","ePrivacy (EU)"], types:["voice","whatsapp"],
+   why:"Automated or AI marketing calls and marketing messages need the person's prior consent.",
+   detect:CONSENT_RE,
+   clause:"Only contact people who gave clear consent to be contacted for marketing. Automated or AI marketing calls always need prior consent."},
+
+  // ---- United States ----
+  {id:"us_hours", region:"us", outbound:true, title:"Call only 8am to 9pm local time", laws:["TCPA"], types:["voice"],
+   why:"US rules limit telemarketing calls to 8am to 9pm in the person's local time.",
+   detect:HOURS_RE,
+   clause:"ONLY call between 8am and 9pm in the person's local time zone."},
+  {id:"us_consent", region:"us", outbound:true, title:"Prior written consent for AI calls", laws:["TCPA","FCC 2024 ruling"], types:["voice"],
+   why:"AI voices count as artificial voices, so marketing calls need prior express written consent.",
+   detect:CONSENT_RE,
+   clause:"Only call people who gave prior express consent to receive calls from us. Marketing calls with an AI voice need prior express written consent."},
+  {id:"us_callback", region:"us", outbound:true, title:"Give a callback number", laws:["TCPA"], types:["voice"],
+   why:"Callers must identify the business and give a number people can call back.",
+   detect:/\b(call ?back number|number (they|you) can call|reach us (at|on))\b/i,
+   clause:"Give the business name at the start and offer a number they can call back on: [callback number]. Tell them how to opt out of future calls."},
+
+  // ---- Canada ----
+  {id:"ca_hours", region:"ca", outbound:true, title:"Telemarketing hours", laws:["CRTC Telemarketing Rules"], types:["voice"],
+   why:"Sales calls are limited to set hours in the person's local time.",
+   detect:HOURS_RE,
+   clause:"ONLY make sales calls between 9am and 9:30pm on weekdays, and 10am to 6pm on weekends, in the person's local time."},
+  {id:"ca_dncl", region:"ca", outbound:true, title:"National Do Not Call List", laws:["CRTC"], types:["voice"],
+   why:"Numbers on the National DNCL must not get sales calls unless an exemption applies.",
+   detect:/\b(do not call list|dncl|national dnc)\b/i,
+   clause:"Never make sales calls to numbers on the National Do Not Call List unless the person is an existing customer or gave consent, and honour our own do-not-call requests."},
+  {id:"ca_casl", region:"ca", outbound:true, title:"Consent and unsubscribe for messages", laws:["CASL"], types:["whatsapp"],
+   why:"Commercial messages need consent, must name the sender, and must offer a way to unsubscribe.",
+   detect:/\bunsubscribe\b/i,
+   clause:"Only send promotional messages to people who consented. Every promotional message must name the business and include an easy way to unsubscribe."},
+
+  // ---- Industries ----
+  {id:"hc_advice", industry:"health", title:"No medical advice", laws:["Medical practice rules"], types:AGENT,
+   why:"Only qualified clinicians may diagnose or advise on treatment.",
+   detect:/\b(never|do not|don'?t|no)\b[^.\n]{0,40}\b(medical|clinical) advice\b|\brefer (clinical|medical) questions\b/i,
+   clause:"NEVER diagnose, give medical advice, or recommend medication. Refer clinical questions to a qualified clinician."},
+  {id:"hc_verify", industry:"health", title:"Verify identity before health details", laws:["HIPAA (US)","NDPA 2023","GDPR"], types:AGENT,
+   why:"Health information is sensitive data and may only be shared with the right person.",
+   detect:/\b(verify|confirm)\b[^.\n]{0,50}\b(identity|date of birth|dob)\b/i,
+   clause:"Before discussing any appointment or health information, confirm you are speaking to the patient by checking their full name and date of birth. Never share health details with anyone else."},
+  {id:"fin_advice", industry:"finance", title:"No financial advice or promised returns", laws:["Financial regulators"], types:AGENT,
+   why:"Personal investment advice is regulated, and promised returns are misleading.",
+   detect:/\b(never|do not|don'?t)\b[^.\n]{0,50}\b(investment|financial) advice\b/i,
+   clause:"NEVER give personal investment advice or promise returns. Give fees, rates and risks exactly as provided, and refer advice questions to a licensed adviser."},
+  {id:"fin_complaints", industry:"finance", title:"A clear complaints route", laws:["Consumer protection"], types:AGENT,
+   why:"Financial services must log complaints and tell customers how they are handled.",
+   detect:/\bcomplain\w*\b/i,
+   clause:"If someone wants to complain, log it, give them a reference and the official complaints contact: [complaints email or phone], and say when to expect a reply."},
+  {id:"fin_debt", industry:"finance", title:"No harassment when collecting debts", laws:["FCCPC lending rules (Nigeria)","FDCPA (US)"], types:AGENT,
+   why:"Threats, shaming and contacting family or employers about a debt are banned in many places.",
+   detect:/\b(never|do not|don'?t)\b[^.\n]{0,40}\b(threaten|harass|shame|insult)\w*/i,
+   clause:"NEVER threaten, shame, insult or pressure anyone about a debt. Only discuss a debt with the borrower, and never contact their friends, family or employer about it."},
+  {id:"legal_advice", industry:"legal", title:"No legal or immigration advice", laws:["Regulated professions"], types:AGENT,
+   why:"Only licensed professionals may give legal or immigration advice or assess eligibility.",
+   detect:/\b(never|do not|don'?t|no)\b[^.\n]{0,40}\b(legal|immigration) advice\b/i,
+   clause:"NEVER give legal or immigration advice, assess eligibility, or promise an outcome such as a visa approval. Book a consultation with a licensed professional instead."},
+  {id:"re_fair", industry:"realestate", title:"Treat every enquiry equally", laws:["Fair Housing Act (US)","Equality laws"], types:AGENT,
+   why:"Refusing or steering people because of who they are is discrimination.",
+   detect:/\b(discriminat\w*|treat (every|all)\w* (enquir\w+|people|customers) (equally|the same)|fair housing|regardless of)\b/i,
+   clause:"Treat every enquiry the same. NEVER filter, steer or refuse anyone because of race, ethnicity, tribe, religion, gender, disability, marital status or family situation."},
+  {id:"edu_minors", industry:"education", title:"Care with minors and student records", laws:["FERPA (US)","NDPA 2023","GDPR"], types:AGENT,
+   why:"Children's data and student records need extra protection.",
+   detect:/\b(parent|guardian|under 18|minors?|student records?)\b/i,
+   clause:"If the person may be under 18, ask for a parent or guardian to continue. Never share a student's records or results without confirming the person is allowed to see them."},
+];
+
+const RISKS = [
+  {id:"hide", re:/\b(do not|don'?t|never)\s+(reveal|say|tell|admit|mention|disclose)\b[^\n]{0,60}\b(ai|a bot|artificial)\b/i, neg:false,
+   text:"Told to hide that it is an AI. If someone asks, it must answer honestly."},
+  {id:"pressure", re:/\b(get them to buy|don'?t take no|do not take no|be (very )?pushy|pressure (them|the customer|people)|by any means|at all costs|keep pushing)\b/i, neg:false,
+   text:"Pressure tactics. These can break consumer-protection rules and cause complaints."},
+  {id:"guarantee", re:/\b(guarantee[sd]?|100% (sure|approval|success)|risk.free|always approved)\b/i, neg:true,
+   text:"Promises like \"guaranteed\" or \"risk-free\". These can count as misleading advertising."},
+  {id:"advice", re:/\b(diagnos(e|is)|prescribe|recommend (a |the )?(medication|drug|dosage)|give (legal|medical|financial|investment|immigration) advice)\b/i, neg:true,
+   text:"Told to give medical, legal or financial advice. Only licensed professionals may do this."},
+  {id:"collect", re:/\b(ask|collect|get|request|take)\b[^.\n]{0,40}\b(card numbers?|pins?|otps?|bvn|cvv|passwords?)\b/i, neg:true,
+   text:"Told to collect PINs, OTPs, BVN or card numbers. Agents should never collect these."},
+  {id:"anytime", re:/\b(call|message|contact)\b[^.\n]{0,20}\b(any ?time|24\/7|day or night|at any hour)\b/i, neg:true,
+   text:"Contacting people at any hour. Most places limit when businesses may call or message."},
+  {id:"discrim", re:/\bonly (rent|sell|serve|offer|call|accept)\b[^.\n]{0,40}\b(men|women|christians?|muslims?|igbo|yoruba|hausa|married|single)\b/i, neg:false,
+   text:"Filters people by who they are. This is discrimination."},
+];
+
+let compPrefs = readJSON("promptdoc.compliance") || {regions:["ng"], industry:"general"};
+const isInbound = t => /\b(answer (incoming )?calls|incoming (support )?calls|inbound)\b/i.test(t) && !/\boutbound\b/i.test(t);
+function applicableRules(){
+  const t = promptEl.value;
+  const inbound = typeId === "voice" && isInbound(t);
+  return COMPLIANCE.filter(r =>
+    r.types.includes(typeId) &&
+    (!r.region || compPrefs.regions.includes(r.region)) &&
+    (!r.industry || r.industry === compPrefs.industry) &&
+    !(inbound && r.outbound));
+}
+function complianceStatus(){
+  const t = promptEl.value;
+  const rules = applicableRules().map(r => {
+    const conflict = r.conflict && r.conflict.test(t);
+    return {r, state: conflict ? "conflict" : r.detect.test(t) ? "ok" : "missing"};
+  });
+  const lines = t.split("\n");
+  const risks = RISKS.filter(k => lines.some(l => k.re.test(l) && !(k.neg && NEG.test(l))));
+  return {rules, risks, ok: rules.filter(x => x.state === "ok").length};
+}
+
+function addCompliance(clauses){
+  if (!clauses.length) return;
+  const prev = promptEl.value;
+  const block = clauses.map(c => "- " + c).join("\n");
+  let next;
+  const m = prev.match(/^#{1,6}\s*COMPLIANCE\b.*$/im);
+  if (m){
+    const start = m.index + m[0].length;
+    const rest = prev.slice(start);
+    const nextHead = rest.search(/\n#{1,2}\s/);
+    const at = nextHead < 0 ? prev.length : start + nextHead;
+    next = prev.slice(0, at).replace(/\s*$/, "") + "\n" + block + prev.slice(at);
+  } else {
+    next = (prev.trim() ? prev.replace(/\s*$/, "") + "\n\n" : "") + "# COMPLIANCE\n" + block;
+  }
+  if (prev.trim()) saveVersion(prev, "Before adding compliance rules");
+  promptEl.value = next; lastText = next; rxFromAI = false;
+  refresh(); saveDraft();
+  showUndo(`Added ${clauses.length} compliance rule${clauses.length > 1 ? "s" : ""} to your prompt.`, prev);
+}
+
+function renderComplianceSummary(){
+  const chip = $("#comp-chip"), lab = $("#comp-label");
+  if (!AGENT.includes(typeId)){ chip.hidden = true; lab.hidden = true; return; }
+  chip.hidden = false; lab.hidden = false;
+  const s = complianceStatus();
+  const where = compPrefs.regions.map(r => REGIONS[r]).join(", ") || "No region";
+  chip.replaceChildren();
+  const b = document.createElement("b"); b.textContent = `${s.ok} of ${s.rules.length} rules covered`;
+  const sm = document.createElement("span"); sm.textContent = `${where} · ${INDUSTRIES[compPrefs.industry]}` + (s.risks.length ? ` · ${s.risks.length} risk${s.risks.length > 1 ? "s" : ""}` : "");
+  const go = document.createElement("span"); go.className = "go"; go.textContent = "Review →";
+  chip.className = "comp-chip " + (s.risks.length || s.rules.some(x => x.state === "conflict") ? "lvl-bad" : s.ok === s.rules.length ? "lvl-good" : "lvl-warn");
+  chip.append(b, sm, go);
+}
+function renderCompliance(){
+  const pane = $("#p-comp");
+  const agent = AGENT.includes(typeId);
+  $("#comp-body").hidden = !agent; $("#comp-na").hidden = agent;
+  if (!agent) return;
+  const reg = $("#comp-regions"); reg.replaceChildren();
+  for (const [id, name] of Object.entries(REGIONS)){
+    const b = document.createElement("button"); b.className = "opt"; b.setAttribute("role","checkbox");
+    b.setAttribute("aria-checked", String(compPrefs.regions.includes(id))); b.textContent = name;
+    b.addEventListener("click", () => {
+      compPrefs.regions = compPrefs.regions.includes(id) ? compPrefs.regions.filter(x => x !== id) : [...compPrefs.regions, id];
+      writeJSON("promptdoc.compliance", compPrefs); renderCompliance(); renderComplianceSummary();
+    });
+    reg.append(b);
+  }
+  const ind = $("#comp-ind"); ind.replaceChildren();
+  for (const [id, name] of Object.entries(INDUSTRIES)){
+    const b = document.createElement("button"); b.className = "opt"; b.setAttribute("role","radio");
+    b.setAttribute("aria-checked", String(compPrefs.industry === id)); b.textContent = name;
+    b.addEventListener("click", () => { compPrefs.industry = id; writeJSON("promptdoc.compliance", compPrefs); renderCompliance(); renderComplianceSummary(); });
+    ind.append(b);
+  }
+  const s = complianceStatus();
+  $("#comp-score").textContent = `${s.ok} of ${s.rules.length} rules covered`;
+  const missing = s.rules.filter(x => x.state !== "ok");
+  $("#comp-sub").textContent = missing.length ? `${missing.length} to add` : "Every rule is covered.";
+  $("#comp-addall").hidden = !missing.length;
+  $("#comp-addall").onclick = () => addCompliance(missing.map(x => x.r.clause));
+
+  const rk = $("#comp-risks"); rk.replaceChildren();
+  for (const k of s.risks){ const li = document.createElement("li"); li.textContent = k.text; rk.append(li); }
+  rk.hidden = !s.risks.length;
+
+  const ul = $("#comp-list"); ul.replaceChildren();
+  for (const {r, state} of s.rules){
+    const li = document.createElement("li"); li.className = "c-" + state;
+    const ic = document.createElement("span"); ic.className = "ci"; ic.textContent = state === "ok" ? "✓" : state === "conflict" ? "!" : "";
+    const body = document.createElement("div");
+    const t = document.createElement("b"); t.textContent = r.title;
+    const laws = document.createElement("span"); laws.className = "laws";
+    for (const l of r.laws){ const c = document.createElement("span"); c.textContent = l; laws.append(c); }
+    const why = document.createElement("p"); why.textContent = state === "conflict" ? "Your prompt says the opposite. " + r.why : r.why;
+    body.append(t, laws, why);
+    li.append(ic, body);
+    if (state !== "ok"){ const add = document.createElement("button"); add.className = "btn ghost"; add.textContent = "Add"; add.addEventListener("click", () => addCompliance([r.clause])); li.append(add); }
+    ul.append(li);
+  }
+}
+function complianceForAI(){
+  if (!AGENT.includes(typeId)) return "";
+  const rules = applicableRules();
+  if (!rules.length) return "";
+  return `\nCompliance: the customers are in ${compPrefs.regions.map(r => REGIONS[r]).join(", ") || "an unspecified region"} and the industry is ${INDUSTRIES[compPrefs.industry]}. The rewrite must end with a # COMPLIANCE section covering these rules: ${rules.map(r => r.title).join("; ")}. Never instruct the agent to hide that it is an AI.`;
+}
+$("#comp-chip").addEventListener("click", () => { showTab("t-comp"); $("#p-comp").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"}); });
+
 /* ================= Inputs ================= */
 let timer;
 promptEl.addEventListener("input", () => { rxFromAI = false; renderMd(); watchEdits(); clearTimeout(timer); timer = setTimeout(refresh, 160); });
@@ -1793,6 +2097,7 @@ $("#copy").addEventListener("click", async () => {
 });
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => showTab(tab.id)));
 function showTab(id){
+  if (id === "t-comp") renderCompliance();
   document.querySelectorAll(".tab").forEach(t => {
     const on = t.id === id; t.setAttribute("aria-selected", String(on));
     $("#" + t.getAttribute("aria-controls")).hidden = !on;
@@ -1872,7 +2177,7 @@ Scoring: 0 = missing, 5 = present but vague, 10 = clear, specific and uses numbe
 Then write an improved version of the prompt for ${t.ai}. Keep the writer's intent, voice and every real fact they gave. Add what is missing. Use [square brackets] only for business facts you cannot guess, at most five.
 ${structured
   ? `Structure it like a production agent prompt: one # HEADING per section, in this order: ${order}. Use short bullet points, numbers instead of adjectives, NEVER / ALWAYS / ONLY for hard rules, and exact example lines in quotes. The agent must answer honestly if asked whether it is an AI. If the original is very long, keep the structure and tighten the wording. Under 500 words.`
-  : `Organise it with short labelled parts in this order: ${order}. Plain English, under 230 words.`}
+  : `Organise it with short labelled parts in this order: ${order}. Plain English, under 230 words.`}${complianceForAI()}
 
 Reply with only JSON in exactly this shape:
 {"vitals":${shape},"flags":["up to 3 short problems"],"summary":"one plain sentence on the biggest fix","rewrite":"the improved prompt"}
